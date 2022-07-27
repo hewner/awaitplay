@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 futures = {version = "0.3", features = ["bilock", "unstable"]}
+async-timer = "0.7"
+console = "0.15"

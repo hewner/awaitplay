@@ -1,85 +1,46 @@
 use futures::executor::block_on;
-use std::pin::Pin;
-use futures::Future;
-use futures::lock::BiLock;
 use futures::join;
+use async_timer::oneshot::{ Timer, Oneshot};
+use std::error::Error;
+use std::time::Duration;
+use console::Term;
+use std::io::Write;
 
-use std::task::{Context, Poll, Waker};
+fn main()  -> Result<(), Box<dyn Error>> {
 
-struct TestShared {
-    ready : bool,
-    waker: Option<Waker>,
-}
-
-struct TestWaitFuture {
-    shared : BiLock<TestShared>,
-}
-
-struct TestReadyFuture {
-    shared : BiLock<TestShared>,
-}
-
-impl TestWaitFuture {
-    fn new() -> (TestWaitFuture, TestReadyFuture) {
-        let (lock1, lock2) = BiLock::new(TestShared { ready: false, waker : None } );
-        (TestWaitFuture { shared : lock1 }, TestReadyFuture { shared : lock2 } )
-    }
-    
-}
-
-impl Future for TestWaitFuture {
-    type Output = ();
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        println!("in wait poll");
-        // Look at the shared state to see if the timer has already completed.
-        let lock_result = self.shared.poll_lock(cx);
-        match lock_result {
-            Poll::Ready(mut test_shared) => {
-                if test_shared.ready {
-                    Poll::Ready(())
-                } else {
-                    test_shared.waker = Some(cx.waker().clone());
-                    Poll::Pending
-                }
-                
-            }
-            Poll::Pending => Poll::Pending
-        }
-        
-    }
-}
-
-impl Future for TestReadyFuture {
-    type Output = ();
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        println!("in ready poll");
-        let lock_result = self.shared.poll_lock(cx);
-        match lock_result {
-            Poll::Ready(mut test_shared) => {
-                if let Some(waker) =  test_shared.waker.take() {
-                    waker.wake()
-                }
-
-                test_shared.ready = true;
-                Poll::Ready(())
-            }
-            Poll::Pending => Poll::Pending
-        }
-        
-    }
-}
+    let mut term = Term::stdout();
 
 
-
-fn main() {
-
-    let (mywait, myready) = TestWaitFuture::new();
     let future = async {
-        println!("future1a");
-        join!(mywait, myready);
-        println!("future1b");
+
+        let wait_time = Duration::from_secs(1);
+        for i in 0..30 {
+            term.move_cursor_to(i,0).unwrap();
+            term.write(b"?").unwrap();
+            let work = Timer::new(wait_time);
+            work.await;
+        }
         
     };
 
-    block_on(future);
+    let mut term2 = Term::stdout();
+
+    
+    let future2 = async {
+
+        let wait_time = Duration::from_secs(1);
+        for i in 0..30 {
+            term2.move_cursor_to(0,i).unwrap();
+            term2.write(b"?").unwrap();
+            let work = Timer::new(wait_time);
+            work.await;
+        }
+        
+    };
+
+    let all = async { join!(future, future2); };
+
+    block_on(all);
+    Ok(())
+
 }
