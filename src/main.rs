@@ -5,38 +5,38 @@ use std::error::Error;
 use std::time::Duration;
 use console::Term;
 use std::io::Write;
+use awaitplay::{SimpleEngine, Engine};
 
 fn main()  -> Result<(), Box<dyn Error>> {
 
-    let mut term = Term::stdout();
 
 
     let future = async {
 
-        let wait_time = Duration::from_secs(1);
+        let mut engine = SimpleEngine::new();
+        
+        
         for i in 0..30 {
-            term.move_cursor_to(i,0).unwrap();
-            term.write(b"?").unwrap();
-            let work = Timer::new(wait_time);
-            work.await;
+            engine.draw_glyph('?', 0, i).await;
+            engine.wait(1./6.).await;
         }
         
     };
 
-    let mut term2 = Term::stdout();
 
-    
     let future2 = async {
 
-        let wait_time = Duration::from_secs(1);
-        for i in 0..30 {
-            term2.move_cursor_to(0,i).unwrap();
-            term2.write(b"?").unwrap();
-            let work = Timer::new(wait_time);
-            work.await;
+        let mut engine = SimpleEngine::new();
+
+        
+        for i in 0..5 {
+            engine.draw_glyph('?', i, 0).await;
+            engine.wait(1.).await;
         }
         
     };
+
+    
 
     let all = async { join!(future, future2); };
 
