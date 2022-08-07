@@ -3,7 +3,7 @@ use futures::join;
 use std::error::Error;
 use awaitplay::{SimpleEngine, Engine};
 use std::ops::Add;
-
+use futures::Future;
 
 use rand::Rng;
 use rand::thread_rng;
@@ -32,7 +32,7 @@ fn is_valid(cur: &Pos) -> bool {
 }
 
 
-async fn moveX<E:Engine<F>>(engine: &mut E) {
+async fn moveX<F:Future, E:Engine<F>>(engine: &mut E) {
 
 {
     
@@ -53,7 +53,7 @@ async fn moveX<E:Engine<F>>(engine: &mut E) {
 }
 
 
-async fn moveStep<E:Engine<F>>(engine : &mut E, mut cur : Pos) -> Pos {
+async fn moveStep<F:Future, E:Engine<F>>(engine : &mut E, mut cur : Pos) -> Pos {
 
 
 
@@ -82,8 +82,12 @@ async fn moveStep<E:Engine<F>>(engine : &mut E, mut cur : Pos) -> Pos {
 
 #[tokio::main]
 async fn main() {
-    let mut engine = SimpleEngine::new( aysnc { } );
-    engine.spawn(  moveX(&mut engine) );
+    //let mut engine = SimpleEngine::new( async { } );
+    //let myspawn = tokio::spawn ( moveX(&mut engine) );
+    //engine.spawn( async { } );
+
+    let q : Box<dyn futures::Future<Output = ()>> = Box::new(async { });
+
     //tokio::spawn(  );
     //tokio::task::yield_now().await;
     //moveX().await

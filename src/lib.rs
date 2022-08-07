@@ -20,10 +20,9 @@ pub struct SimpleEngine<F : Future> {
 
 impl<F:Future+ std::marker::Send> SimpleEngine<F> {
 
-    pub fn new(f:F) -> SimpleEngine<F> {
+    pub fn new(_ : F) -> SimpleEngine<F> {
         let (tx, rx): (Sender<F>, Receiver<F>) = mpsc::channel();
         let mut result = SimpleEngine { term : Term::stdout() , spawned_channel : tx};
-        result.spawn(f);
         result
     }
     
