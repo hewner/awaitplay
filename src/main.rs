@@ -32,32 +32,39 @@ fn is_valid(cur: &Pos) -> bool {
 }
 
 
-async fn moveX() {
+async fn moveX<E:Engine<F>>(engine: &mut E) {
 
-    let mut rng = thread_rng();
+{
     
-    let mut engine = SimpleEngine::new();
-    let row_start: i16 = rng.gen_range(0..40);
-    let col_start: i16 = rng.gen_range(0..80);
+    let mut rng = thread_rng();
+}   
+    let row_start: i16 = 00; //rng.gen_range(0..40);
+    let col_start: i16 = 00; //rng.gen_range(0..80);
 
+
+
+    
     let mut start = pos(row_start,col_start);
     for i in 0..10 {
-        start = moveStep(&mut engine, start).await;
+        start = moveStep(engine, start).await;
         if !is_valid(&start) { break; }
     }
     
 }
 
 
-async fn moveStep(engine : &mut SimpleEngine, mut cur : Pos) -> Pos {
+async fn moveStep<E:Engine<F>>(engine : &mut E, mut cur : Pos) -> Pos {
 
 
 
+    {
     
     let mut rng = thread_rng();
-
-    let dir: usize = rng.gen_range(0..4);
+    }
+    
+    let dir: usize = 0; //rng.gen_range(0..4);
     let deltas = vec![pos(0,1), pos(1,0), pos(0,-1), pos(-1,0)];
+
 
 
     
@@ -73,13 +80,11 @@ async fn moveStep(engine : &mut SimpleEngine, mut cur : Pos) -> Pos {
     cur
 }
 
-
-fn main()  -> Result<(), Box<dyn Error>> {
-    
-
-    let all = async { join!(moveX(), moveX(), moveX(), moveX(), moveX(), moveX(), moveX(), moveX(), moveX(), moveX(), moveX(), moveX(), moveX(), moveX(), moveX(), moveX(), moveX(), moveX(), moveX()); };
-
-    block_on(all);
-    Ok(())
-
+#[tokio::main]
+async fn main() {
+    let mut engine = SimpleEngine::new( aysnc { } );
+    engine.spawn(  moveX(&mut engine) );
+    //tokio::spawn(  );
+    //tokio::task::yield_now().await;
+    //moveX().await
 }

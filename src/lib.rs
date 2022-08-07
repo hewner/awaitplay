@@ -2,29 +2,35 @@ use async_trait::async_trait;
 use console::Term;
 use async_timer::oneshot::{ Timer, Oneshot};
 use std::time::Duration;
-
+use std::sync::mpsc;
+use std::sync::mpsc::{Sender, Receiver};
+use std::future::Future;
 
 #[async_trait]
-pub trait Engine {
+pub trait Engine<F:Future> {
     async fn draw_glyph(&mut self, glyph : char, row: usize, col: usize);
     async fn wait(&mut self, secs : f64);
-        
+    async fn spawn(&mut self, f:F);
 }
 
-pub struct SimpleEngine {
-    term : Term
+pub struct SimpleEngine<F : Future> {
+    term : Term,
+    spawned_channel : mpsc::Sender<F>
 }
 
-impl SimpleEngine {
+impl<F:Future+ std::marker::Send> SimpleEngine<F> {
 
-    pub fn new() -> SimpleEngine {
-        SimpleEngine { term : Term::stdout() }
+    pub fn new(f:F) -> SimpleEngine<F> {
+        let (tx, rx): (Sender<F>, Receiver<F>) = mpsc::channel();
+        let mut result = SimpleEngine { term : Term::stdout() , spawned_channel : tx};
+        result.spawn(f);
+        result
     }
     
 }
 
 #[async_trait]
-impl Engine for SimpleEngine {
+impl<F: Future + std::marker::Send> Engine<F> for SimpleEngine<F> {
     async fn draw_glyph(&mut self, glyph : char, row: usize, col: usize) {
 
         use std::io::Write;
@@ -43,5 +49,7 @@ impl Engine for SimpleEngine {
 
     }
 
-    
+    async fn spawn(&mut self, f:F) {
+        f.await;
+    }
 }
