@@ -1,9 +1,6 @@
-use futures::executor::block_on;
-use futures::join;
-use std::error::Error;
-use awaitplay::{SimpleEngine, Engine};
+use awaitplay::Engine;
+use awaitplay::simple_engine::SimpleEngine;
 use std::ops::Add;
-use futures::Future;
 
 use rand::Rng;
 use rand::thread_rng;
@@ -32,7 +29,7 @@ fn is_valid(cur: &Pos) -> bool {
 }
 
 
-async fn moveX<F:Future, E:Engine<F>>(engine: &mut E) {
+async fn move_x<E:Engine>(engine: &mut E) {
 
 {
     
@@ -46,14 +43,14 @@ async fn moveX<F:Future, E:Engine<F>>(engine: &mut E) {
     
     let mut start = pos(row_start,col_start);
     for i in 0..10 {
-        start = moveStep(engine, start).await;
+        start = move_step(engine, start).await;
         if !is_valid(&start) { break; }
     }
     
 }
 
 
-async fn moveStep<F:Future, E:Engine<F>>(engine : &mut E, mut cur : Pos) -> Pos {
+async fn move_step<E:Engine>(engine : &mut E, mut cur : Pos) -> Pos {
 
 
 
