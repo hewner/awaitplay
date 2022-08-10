@@ -1,33 +1,58 @@
 use console::Term;
 use async_trait::async_trait;
-use std::sync::mpsc;
+use tokio::sync::mpsc;
 //use std::sync::mpsc::{Sender, Receiver};
 use futures::Future;
 use std::time::Duration;
 use async_timer::oneshot::Timer;
 use async_timer::Oneshot;
+use tokio::task::JoinHandle;
+use std::sync::{Arc,Mutex};
 use super::Engine;
 
+#[derive(Clone)]
 pub struct SimpleEngine {
+    mutex : Arc<Mutex<i32>>,
     term : Term,
-    spawned_channel : mpsc::Sender<Box<dyn Future<Output= () > + std::marker::Send>>
+    spawned_channel : mpsc::UnboundedSender<JoinHandle<()>>
 }
 
 impl SimpleEngine {
 
-    pub fn new() -> SimpleEngine {
+    pub fn new() -> (SimpleEngine, impl futures::Future<Output = ()>) {
         //        let (tx, rx): (Sender<Box<Future>>, Receiver<Box<Future>>) = mpsc::channel();
-        let (tx, rx) = mpsc::channel();
-        let mut result = SimpleEngine { term : Term::stdout() , spawned_channel : tx};
-        result
+        let (tx, mut rx) = mpsc::unbounded_channel();
+
+        let mutex = Arc::new(Mutex::new(0));
+        let mut result = SimpleEngine { mutex : mutex, term : Term::stdout() , spawned_channel : tx};
+        (result, async move {
+
+            loop {
+                match rx.recv().await {
+                    Some(handle) => {
+                        println!("got handle\n");
+                        handle.await;
+                    }
+                    None => {
+                        println!("no more handles");
+                        break;
+                    }
+                }
+                
+            }
+        })
     }
     
+
+
 }
 
 #[async_trait]
 impl Engine for SimpleEngine {
     async fn draw_glyph(&mut self, glyph : char, row: usize, col: usize) {
 
+
+        let lockme = self.mutex.lock().unwrap();
         use std::io::Write;
         
         self.term.move_cursor_to(col, row).unwrap();
@@ -44,7 +69,9 @@ impl Engine for SimpleEngine {
 
     }
 
-    async fn spawn<F: Future + std::marker::Send>(&mut self, f:F) {
-        f.await;
+    fn spawn<F: Future<Output=()> + std::marker::Send + 'static>(&mut self, f:F) {
+        let handle = tokio::spawn(f);
+        println!("sending handle\n");
+        self.spawned_channel.send(handle);
     }
 }
