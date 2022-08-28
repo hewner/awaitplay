@@ -29,7 +29,7 @@ fn is_valid(cur: &Pos) -> bool {
 }
 
 
-async fn move_x<E:Engine>(mut engine: E) {
+async fn move_x<E:Engine + 'static>(mut engine: E) {
 
 
     let row_start : i16;
@@ -54,7 +54,21 @@ async fn move_x<E:Engine>(mut engine: E) {
 }
 
 
-async fn move_step<E:Engine>(engine : &mut E, mut cur : Pos) -> Pos {
+async fn fading<E:Engine>(mut engine : E, cur : Pos) {
+
+    engine.back_color(0,100,0);
+    engine.draw_glyph('X', cur.row.try_into().unwrap(), cur.col.try_into().unwrap()).await;
+    engine.wait(0.1).await;
+    
+    for i in 1..20 {
+        engine.back_color(0,100 - i * 5,100 - i * 5);
+        engine.draw_glyph(' ', cur.row.try_into().unwrap(), cur.col.try_into().unwrap()).await;
+        engine.wait(0.1).await;
+    }
+    
+}
+
+async fn move_step<E:Engine + 'static>(engine : &mut E, mut cur : Pos) -> Pos {
 
 
 
@@ -74,10 +88,10 @@ async fn move_step<E:Engine>(engine : &mut E, mut cur : Pos) -> Pos {
     
     for _i in 0..5 {
 
-        engine.draw_glyph(' ', cur.row.try_into().unwrap(), cur.col.try_into().unwrap()).await;
+        
         cur = cur + deltas[dir];
         if !is_valid(&cur) { return cur };
-        engine.draw_glyph('X', cur.row.try_into().unwrap(), cur.col.try_into().unwrap()).await;
+        engine.spawn(fading(engine.clone(), cur.clone()));
         engine.wait(0.1).await;
     }
     cur

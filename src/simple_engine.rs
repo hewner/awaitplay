@@ -14,6 +14,7 @@ use super::Engine;
 
 #[derive(Clone)]
 pub struct SimpleEngine {
+    bg : terminal::Color,
     mutex : Arc<Mutex<Terminal<Stdout>>>,
     spawned_channel : mpsc::UnboundedSender<JoinHandle<()>>
 }
@@ -25,7 +26,9 @@ impl SimpleEngine {
         let (tx, mut rx) = mpsc::unbounded_channel();
 
         let mutex = Arc::new(Mutex::new(terminal::stdout()));
-        let result = SimpleEngine { mutex : mutex, spawned_channel : tx};
+        let result = SimpleEngine { mutex : mutex,
+                                    bg : terminal::Color::Reset,
+                                    spawned_channel : tx};
         (result, async move {
 
             loop {
@@ -55,6 +58,12 @@ impl Engine for SimpleEngine {
 
         let mut terminal = self.mutex.lock().unwrap();
         use std::io::Write;
+
+        use terminal::Color;
+        
+        terminal.batch(terminal::Action::SetBackgroundColor(self.bg)).unwrap();
+
+        
         terminal.batch(terminal::Action::MoveCursorTo(col.try_into().unwrap(), row.try_into().unwrap())).unwrap();
         
         
@@ -68,6 +77,10 @@ impl Engine for SimpleEngine {
         
     }
 
+    fn back_color(&mut self, r : u8, g : u8, b : u8) {
+        self.bg = terminal::Color::Rgb(r,g,b);
+    }
+    
 
     async fn wait(&mut self, secs : f64) {
         let wait_time = Duration::from_nanos((secs * 1_000_000_000.0) as u64);
