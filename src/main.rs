@@ -32,8 +32,8 @@ fn is_valid(cur: &Pos) -> bool {
 async fn move_x<E:Engine>(mut engine: E) {
 
 
-    let mut row_start : i16;
-    let mut col_start : i16;
+    let row_start : i16;
+    let col_start : i16;
 
     {
     
@@ -46,7 +46,7 @@ async fn move_x<E:Engine>(mut engine: E) {
 
     
     let mut start = pos(row_start,col_start);
-    for i in 0..10 {
+    for _ in 0..10 {
         start = move_step(&mut engine, start).await;
         if !is_valid(&start) { break; }
     }
@@ -85,36 +85,15 @@ async fn move_step<E:Engine>(engine : &mut E, mut cur : Pos) -> Pos {
 
 #[tokio::main]
 async fn main() {
+
     let (mut engine, waiter) = SimpleEngine::new();
 
-    // let q : i32 = async { | x : i32 | println!("QQQQ{}QQQQQ", x) };
-    // q.await(3);
-    engine.spawn ( move_x(engine.clone() ) );
-    engine.spawn ( move_x(engine.clone() ) );
-    engine.spawn ( move_x(engine.clone() ) );
-    engine.spawn ( move_x(engine.clone() ) );
-    engine.spawn ( move_x(engine.clone() ) );
-    engine.spawn ( move_x(engine.clone() ) );
-    engine.spawn ( move_x(engine.clone() ) );
-    engine.spawn ( move_x(engine.clone() ) );
-    engine.spawn ( move_x(engine.clone() ) );
-    engine.spawn ( move_x(engine.clone() ) );
-    engine.spawn ( move_x(engine.clone() ) );
-    engine.spawn ( move_x(engine.clone() ) );
-    engine.spawn ( move_x(engine.clone() ) );
-    engine.spawn ( move_x(engine.clone() ) );
-    engine.spawn ( move_x(engine.clone() ) );
-
-    drop(engine);
-    println!("awaiting waiter");
-    waiter.await;
+    for _ in 0..3 {
+        engine.spawn ( move_x(engine.clone() ) );
+    }
     
-    //let myspawn = tokio::spawn ( moveX(&mut engine) );
-    //engine.spawn( async { } );
+    drop(engine);
+//    println!("awaiting waiter");
+    waiter.await;
 
-    //let q : Box<dyn futures::Future<Output = ()>> = Box::new(async { });
-
-    //tokio::spawn(  );
-    //tokio::task::yield_now().await;
-    //moveX().await
 }

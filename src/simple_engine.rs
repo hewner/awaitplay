@@ -1,4 +1,3 @@
-use console::Term;
 use async_trait::async_trait;
 use tokio::sync::mpsc;
 //use std::sync::mpsc::{Sender, Receiver};
@@ -7,13 +6,15 @@ use std::time::Duration;
 use async_timer::oneshot::Timer;
 use async_timer::Oneshot;
 use tokio::task::JoinHandle;
+use terminal;
+use terminal::Terminal;
 use std::sync::{Arc,Mutex};
+use std::io::Stdout;
 use super::Engine;
 
 #[derive(Clone)]
 pub struct SimpleEngine {
-    mutex : Arc<Mutex<i32>>,
-    term : Term,
+    mutex : Arc<Mutex<Terminal<Stdout>>>,
     spawned_channel : mpsc::UnboundedSender<JoinHandle<()>>
 }
 
@@ -23,18 +24,18 @@ impl SimpleEngine {
         //        let (tx, rx): (Sender<Box<Future>>, Receiver<Box<Future>>) = mpsc::channel();
         let (tx, mut rx) = mpsc::unbounded_channel();
 
-        let mutex = Arc::new(Mutex::new(0));
-        let mut result = SimpleEngine { mutex : mutex, term : Term::stdout() , spawned_channel : tx};
+        let mutex = Arc::new(Mutex::new(terminal::stdout()));
+        let result = SimpleEngine { mutex : mutex, spawned_channel : tx};
         (result, async move {
 
             loop {
                 match rx.recv().await {
                     Some(handle) => {
-                        println!("got handle\n");
-                        handle.await;
+        //                println!("got handle\n");
+                        handle.await.unwrap();
                     }
                     None => {
-                        println!("no more handles");
+         //               println!("no more handles");
                         break;
                     }
                 }
@@ -52,14 +53,19 @@ impl Engine for SimpleEngine {
     async fn draw_glyph(&mut self, glyph : char, row: usize, col: usize) {
 
 
-        let lockme = self.mutex.lock().unwrap();
+        let mut terminal = self.mutex.lock().unwrap();
         use std::io::Write;
+        terminal.batch(terminal::Action::MoveCursorTo(col.try_into().unwrap(), row.try_into().unwrap())).unwrap();
         
-        self.term.move_cursor_to(col, row).unwrap();
+        
+        
+        //self.term.move_cursor_to(col, row).unwrap();
         let mut b = [0; 4];
         let result = glyph.encode_utf8(&mut b);
-        self.term.write(result.as_bytes()).unwrap();
-
+        terminal.write(result.as_bytes()).unwrap();
+        //TODO: error handling that deals with these unwraps
+        terminal.flush_batch().unwrap();
+        
     }
 
 
@@ -71,7 +77,7 @@ impl Engine for SimpleEngine {
 
     fn spawn<F: Future<Output=()> + std::marker::Send + 'static>(&mut self, f:F) {
         let handle = tokio::spawn(f);
-        println!("sending handle\n");
-        self.spawned_channel.send(handle);
+        // println!("sending handle\n");
+        self.spawned_channel.send(handle).unwrap();
     }
 }
